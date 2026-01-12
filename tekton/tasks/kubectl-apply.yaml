@@ -1,0 +1,51 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: kubectl-apply
+spec:
+  description: Apply Kubernetes manifests using kubectl
+  params:
+    - name: manifest-dir
+      description: Directory containing Kubernetes manifests
+      type: string
+    - name: namespace
+      description: Target namespace (optional, uses manifest namespace if not specified)
+      default: ""
+      type: string
+  workspaces:
+    - name: source
+      description: Source code workspace
+  steps:
+    - name: apply-manifests
+      image: bitnami/kubectl:latest
+      workingDir: $(workspaces.source.path)
+      script: |
+        #!/bin/bash
+        set -e
+        
+        echo "Applying manifests from $(params.manifest-dir)"
+        
+        # Check if directory exists
+        if [ ! -d "$(params.manifest-dir)" ]; then
+          echo "Error: Directory $(params.manifest-dir) does not exist"
+          exit 1
+        fi
+        
+        # Apply manifests using kustomize if kustomization.yaml exists
+        if [ -f "$(params.manifest-dir)/kustomization.yaml" ]; then
+          echo "Found kustomization.yaml, using kubectl apply -k"
+          if [ -n "$(params.namespace)" ]; then
+            kubectl apply -k $(params.manifest-dir) -n $(params.namespace)
+          else
+            kubectl apply -k $(params.manifest-dir)
+          fi
+        else
+          echo "No kustomization.yaml found, applying individual manifests"
+          if [ -n "$(params.namespace)" ]; then
+            kubectl apply -f $(params.manifest-dir) -n $(params.namespace)
+          else
+            kubectl apply -f $(params.manifest-dir)
+          fi
+        fi
+        
+        echo "Manifests applied successfully"

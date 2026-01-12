@@ -1,0 +1,9 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+- tasks/python-test.yaml
+- tasks/buildah-build.yaml
+- tasks/kubectl-apply.yaml
+
+namespace: tekton-pipelines

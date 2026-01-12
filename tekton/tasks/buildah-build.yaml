@@ -1,0 +1,61 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: buildah-build
+spec:
+  description: Build container images with Buildah
+  params:
+    - name: IMAGE
+      description: Reference of the image buildah will produce
+      type: string
+    - name: DOCKERFILE
+      description: Path to the Dockerfile to build
+      default: "./Dockerfile"
+      type: string
+    - name: CONTEXT
+      description: Path to the directory to use as context
+      default: "."
+      type: string
+    - name: TLSVERIFY
+      description: Verify the TLS on the registry endpoint
+      default: "true"
+      type: string
+  workspaces:
+    - name: source
+      description: Source code workspace
+  steps:
+    - name: build-and-push
+      image: quay.io/buildah/stable:v1.23.1
+      workingDir: $(workspaces.source.path)
+      securityContext:
+        privileged: true
+      script: |
+        #!/usr/bin/env bash
+        set -e
+        
+        echo "Building image $(params.IMAGE) from $(params.DOCKERFILE)"
+        
+        # Build the image
+        buildah build \
+          --format=oci \
+          --tls-verify=$(params.TLSVERIFY) \
+          --no-cache \
+          -f $(params.DOCKERFILE) \
+          -t $(params.IMAGE) \
+          $(params.CONTEXT)
+        
+        echo "Pushing image $(params.IMAGE)"
+        
+        # Push the image
+        buildah push \
+          --tls-verify=$(params.TLSVERIFY) \
+          $(params.IMAGE) \
+          docker://$(params.IMAGE)
+        
+        echo "Image $(params.IMAGE) built and pushed successfully"
+      volumeMounts:
+        - name: varlibcontainers
+          mountPath: /var/lib/containers
+  volumes:
+    - name: varlibcontainers
+      emptyDir: {}
