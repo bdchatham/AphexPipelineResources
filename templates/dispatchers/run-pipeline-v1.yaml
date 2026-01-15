@@ -26,7 +26,6 @@ spec:
       description: Namespace where pipeline exists
     
     # Execution parameters
-    - name: execution-role
       description: Execution profile (standard/elevated)
       default: standard
     - name: org-name
@@ -46,7 +45,6 @@ spec:
           platform.arbiter.io/triggered: "true"
           platform.arbiter.io/event-type: $(tt.params.event-type)
           platform.arbiter.io/event-id: $(tt.params.event-id)
-          platform.arbiter.io/execution-role: $(tt.params.execution-role)
       spec:
         pipelineRef:
           resolver: cluster
@@ -66,8 +64,6 @@ spec:
             value: $(tt.params.event-type)
           - name: event-id
             value: $(tt.params.event-id)
-          - name: execution-role
-            value: $(tt.params.execution-role)
           - name: triggered-at
             value: $(tt.params.triggered-at)
           - name: org-name

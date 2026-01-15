@@ -32,7 +32,6 @@ Pipelines **may** use or ignore these platform-injected parameters:
 
 | Parameter | Type | Description | Default |
 |-----------|------|-------------|---------|
-| `execution-role` | string | Execution profile name (standard, elevated) | `standard` |
 | `triggered-at` | string | ISO8601 timestamp when webhook was received | `""` |
 | `org-name` | string | Aphex organization name | `""` |
 
@@ -64,7 +63,6 @@ spec:
       description: Unique event identifier
     
     # Optional parameters
-    - name: execution-role
       type: string
       default: standard
       description: Execution profile (standard/elevated)
