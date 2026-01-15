@@ -72,7 +72,7 @@ spec:
 | `event-id` | TriggerBinding | Unique event ID |
 | `pipeline-name` | RepoBinding | Target pipeline name |
 | `pipeline-namespace` | RepoBinding | Target namespace |
-| `execution-profile` | RepoBinding | standard or elevated |
+| `execution-role` | RepoBinding | standard or elevated |
 | `org-name` | Organization | Aphex org name |
 | `triggered-at` | Platform | ISO8601 timestamp |
 
