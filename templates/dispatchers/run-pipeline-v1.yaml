@@ -1,0 +1,76 @@
+apiVersion: triggers.tekton.dev/v1beta1
+kind: TriggerTemplate
+metadata:
+  name: run-pipeline-v1
+  labels:
+    platform.arbiter.io/template-version: v1
+    platform.arbiter.io/managed-by: platform
+spec:
+  params:
+    # Webhook payload parameters
+    - name: git-url
+      description: Repository clone URL
+    - name: git-revision
+      description: Git commit SHA or branch
+    - name: repo-full-name
+      description: Repository name (org/repo)
+    - name: event-type
+      description: Webhook event type
+    - name: event-id
+      description: Unique event identifier
+    
+    # Pipeline targeting parameters
+    - name: pipeline-name
+      description: Name of the pipeline to run
+    - name: pipeline-namespace
+      description: Namespace where pipeline exists
+    
+    # Execution parameters
+    - name: execution-profile
+      description: Execution profile (standard/elevated)
+      default: standard
+    - name: org-name
+      description: Organization name
+      default: ""
+    - name: triggered-at
+      description: Webhook timestamp
+      default: ""
+  
+  resourcetemplates:
+    - apiVersion: tekton.dev/v1
+      kind: PipelineRun
+      metadata:
+        generateName: $(tt.params.pipeline-name)-
+        namespace: $(tt.params.pipeline-namespace)
+        labels:
+          platform.arbiter.io/triggered: "true"
+          platform.arbiter.io/event-type: $(tt.params.event-type)
+          platform.arbiter.io/event-id: $(tt.params.event-id)
+          platform.arbiter.io/execution-profile: $(tt.params.execution-profile)
+      spec:
+        pipelineRef:
+          resolver: cluster
+          params:
+            - name: name
+              value: $(tt.params.pipeline-name)
+            - name: namespace
+              value: $(tt.params.pipeline-namespace)
+        params:
+          - name: git-url
+            value: $(tt.params.git-url)
+          - name: git-revision
+            value: $(tt.params.git-revision)
+          - name: repo-full-name
+            value: [$(tt.params.repo-full-name)]
+          - name: event-type
+            value: $(tt.params.event-type)
+          - name: event-id
+            value: $(tt.params.event-id)
+          - name: execution-profile
+            value: $(tt.params.execution-profile)
+          - name: triggered-at
+            value: $(tt.params.triggered-at)
+          - name: org-name
+            value: $(tt.params.org-name)
+        serviceAccountName: pipeline-runner
+        timeout: 1h
