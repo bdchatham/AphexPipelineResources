@@ -1,0 +1,114 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: argocd-deployment
+  labels:
+    app.kubernetes.io/version: "0.1"
+  annotations:
+    tekton.dev/pipelines.minVersion: "0.12.1"
+    tekton.dev/categories: GitOps
+    tekton.dev/tags: argocd, gitops, deployment
+    tekton.dev/displayName: "ArgoCD Application Deployment"
+    tekton.dev/platforms: "linux/amd64,linux/arm64"
+spec:
+  description: >-
+    This Task creates or updates an ArgoCD Application resource to deploy
+    applications using GitOps. It generates the Application manifest and
+    applies it to the cluster, allowing ArgoCD to handle the actual deployment.
+
+  params:
+    - name: app-name
+      description: Name of the ArgoCD Application
+      type: string
+    - name: repo-url
+      description: Git repository URL containing the manifests
+      type: string
+    - name: repo-revision
+      description: Git revision (branch, tag, or commit SHA)
+      type: string
+      default: "main"
+    - name: manifest-path
+      description: Path within the repository containing Kubernetes manifests
+      type: string
+    - name: target-namespace
+      description: Target namespace where the application will be deployed
+      type: string
+    - name: argocd-namespace
+      description: Namespace where ArgoCD is installed
+      type: string
+      default: "argocd"
+    - name: auto-sync
+      description: Enable automatic sync when Git repository changes
+      type: string
+      default: "true"
+    - name: prune
+      description: Enable pruning of resources no longer in Git
+      type: string
+      default: "true"
+    - name: self-heal
+      description: Enable self-healing when cluster state drifts from Git
+      type: string
+      default: "true"
+    - name: create-namespace
+      description: Create target namespace if it doesn't exist
+      type: string
+      default: "true"
+    - name: kubectl-image
+      description: The image providing kubectl binary
+      type: string
+      default: "bitnami/kubectl:1.28"
+
+  steps:
+    - name: create-argocd-application
+      image: "$(params.kubectl-image)"
+      script: |
+        #!/bin/bash
+        set -e
+
+        echo "Creating ArgoCD Application: $(params.app-name)"
+        echo "Repository: $(params.repo-url)"
+        echo "Revision: $(params.repo-revision)"
+        echo "Path: $(params.manifest-path)"
+        echo "Target Namespace: $(params.target-namespace)"
+
+        # Generate ArgoCD Application manifest
+        cat <<EOF | kubectl apply -f - --server-side
+        apiVersion: argoproj.io/v1alpha1
+        kind: Application
+        metadata:
+          name: $(params.app-name)
+          namespace: $(params.argocd-namespace)
+          finalizers:
+            - resources-finalizer.argocd.argoproj.io
+        spec:
+          project: default
+          source:
+            repoURL: $(params.repo-url)
+            targetRevision: $(params.repo-revision)
+            path: $(params.manifest-path)
+          destination:
+            server: https://kubernetes.default.svc
+            namespace: $(params.target-namespace)
+          syncPolicy:
+            automated:
+              prune: $(params.prune)
+              selfHeal: $(params.self-heal)
+            syncOptions:
+              - CreateNamespace=$(params.create-namespace)
+            retry:
+              limit: 5
+              backoff:
+                duration: 5s
+                factor: 2
+                maxDuration: 3m
+        EOF
+
+        echo ""
+        echo "✓ ArgoCD Application '$(params.app-name)' created/updated successfully"
+        echo ""
+        echo "Verifying Application was created..."
+        kubectl get application $(params.app-name) -n $(params.argocd-namespace)
+        
+        echo ""
+        echo "ArgoCD will now sync the application from Git."
+        echo "Monitor sync status: kubectl get application $(params.app-name) -n $(params.argocd-namespace) -o jsonpath='{.status.sync.status}'"

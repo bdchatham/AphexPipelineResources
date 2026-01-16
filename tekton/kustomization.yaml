@@ -5,5 +5,6 @@ resources:
 - tasks/python-test.yaml
 - tasks/buildah-build.yaml
 - tasks/kubectl-apply.yaml
+- tasks/argocd-deployment.yaml
 
 namespace: tekton-pipelines
