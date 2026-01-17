@@ -153,6 +153,98 @@ taskRef:
       workspace: shared-workspace
 ```
 
+### argocd-deployment
+
+Create or update ArgoCD Application resources for GitOps deployment.
+
+**Task Reference:**
+```yaml
+taskRef:
+  resolver: cluster
+  params:
+    - name: name
+      value: argocd-deployment
+    - name: namespace
+      value: tekton-pipelines
+```
+
+**Parameters:**
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `app-name` | string | Yes | - | Name of the ArgoCD Application |
+| `repo-url` | string | Yes | - | Git repository URL containing the manifests |
+| `repo-revision` | string | No | `main` | Git revision (branch, tag, or commit SHA) |
+| `manifest-path` | string | Yes | - | Path within the repository containing Kubernetes manifests |
+| `target-namespace` | string | Yes | - | Target namespace where the application will be deployed |
+| `argocd-namespace` | string | No | `argocd` | Namespace where ArgoCD is installed |
+| `auto-sync` | string | No | `true` | Enable automatic sync when Git repository changes |
+| `prune` | string | No | `true` | Enable pruning of resources no longer in Git |
+| `self-heal` | string | No | `true` | Enable self-healing when cluster state drifts from Git |
+| `create-namespace` | string | No | `true` | Create target namespace if it doesn't exist |
+| `kubectl-image` | string | No | `bitnami/kubectl:1.28` | The image providing kubectl binary |
+
+**Workspaces:**
+
+None required (operates directly on cluster resources).
+
+**RBAC Requirements:**
+
+Pipelines using this task must have permissions to create ArgoCD Application resources. Use the shared `argocd-application-deployer` ClusterRole:
+
+```yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: pipeline-argocd-deployer
+  namespace: argocd
+subjects:
+  - kind: ServiceAccount
+    name: pipeline-runner
+    namespace: {pipeline-namespace}
+roleRef:
+  kind: ClusterRole
+  name: argocd-application-deployer
+  apiGroup: rbac.authorization.k8s.io
+```
+
+**Example Usage:**
+```yaml
+- name: deploy-via-argocd
+  taskRef:
+    resolver: cluster
+    params:
+      - name: name
+        value: argocd-deployment
+      - name: namespace
+        value: tekton-pipelines
+  params:
+    - name: app-name
+      value: "my-app-production"
+    - name: repo-url
+      value: "https://github.com/myorg/my-app"
+    - name: repo-revision
+      value: "$(params.git-revision)"
+    - name: manifest-path
+      value: "./manifests/knowledge-base"
+    - name: target-namespace
+      value: "my-app-prod"
+    - name: auto-sync
+      value: "true"
+    - name: prune
+      value: "true"
+    - name: self-heal
+      value: "true"
+```
+
+**Behavior:**
+- Creates or updates ArgoCD Application resource using server-side apply
+- Configures automated sync policy with retry backoff
+- Verifies Application was created successfully
+- ArgoCD handles the actual deployment from Git
+
+**Source**: `tekton/tasks/argocd-deployment.yaml`
+
 ## Dispatcher Template API
 
 ### run-pipeline-v1

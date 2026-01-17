@@ -63,6 +63,70 @@ Applies Kubernetes manifests using kubectl.
 - Falls back to direct `kubectl apply -f` for plain manifests
 - Validates directory existence before applying
 
+#### argocd-deployment
+Creates or updates ArgoCD Application resources for GitOps deployment.
+
+**Parameters:**
+- `app-name`: Name of the ArgoCD Application
+- `repo-url`: Git repository URL containing the manifests
+- `repo-revision`: Git revision (branch, tag, or commit SHA) (default: `main`)
+- `manifest-path`: Path within the repository containing Kubernetes manifests
+- `target-namespace`: Target namespace where the application will be deployed
+- `argocd-namespace`: Namespace where ArgoCD is installed (default: `argocd`)
+- `auto-sync`: Enable automatic sync when Git repository changes (default: `true`)
+- `prune`: Enable pruning of resources no longer in Git (default: `true`)
+- `self-heal`: Enable self-healing when cluster state drifts from Git (default: `true`)
+- `create-namespace`: Create target namespace if it doesn't exist (default: `true`)
+- `kubectl-image`: The image providing kubectl binary (default: `bitnami/kubectl:1.28`)
+
+**Workspaces:**
+None required (operates directly on cluster resources).
+
+**RBAC Requirements:**
+Pipelines using this task must bind to the shared `argocd-application-deployer` ClusterRole to create ArgoCD Application resources.
+
+**Behavior:**
+- Creates or updates ArgoCD Application resource using server-side apply
+- Configures automated sync policy with retry backoff
+- Verifies Application was created successfully
+- ArgoCD handles the actual deployment from Git
+
+### Shared RBAC Resources
+
+#### argocd-application-deployer ClusterRole
+
+Platform-wide shared ClusterRole for pipelines that need to deploy via ArgoCD.
+
+**Location**: `ArbiterPipelineInfrastructure/platform/rbac/argocd-deployer-clusterrole.yaml`
+
+**Permissions:**
+- Create, update, patch, get, and list ArgoCD Application resources
+- Read ArgoCD Application status for verification
+
+**Usage:**
+Pipelines bind to this role using a RoleBinding in the `argocd` namespace:
+
+```yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: pipeline-argocd-deployer
+  namespace: argocd
+subjects:
+  - kind: ServiceAccount
+    name: pipeline-runner
+    namespace: {pipeline-namespace}
+roleRef:
+  kind: ClusterRole
+  name: argocd-application-deployer
+  apiGroup: rbac.authorization.k8s.io
+```
+
+**Benefits:**
+- Single source of truth for ArgoCD deployment permissions
+- Consistent permissions across all pipelines
+- Easier to audit and update permissions platform-wide
+
 ### Dispatcher Templates
 
 Thin TriggerTemplates that convert webhook events into PipelineRuns.
