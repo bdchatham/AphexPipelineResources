@@ -102,7 +102,7 @@ Resources are managed by the platform team and versioned. Product teams referenc
 
 ## Related Repositories
 
-- **ArbiterPipelineInfrastructure**: Platform infrastructure and controllers
+- **AphexPlatformInfrastructure**: Platform infrastructure and controllers
 - **AphexCLI**: Command-line tool for managing pipelines
 - **AphexPipelineTemplate**: Template for creating new product pipelines
 

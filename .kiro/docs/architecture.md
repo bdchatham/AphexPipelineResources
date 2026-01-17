@@ -97,7 +97,7 @@ Pipelines using this task must bind to the shared `argocd-application-deployer` 
 
 Platform-wide shared ClusterRole for pipelines that need to deploy via ArgoCD.
 
-**Location**: `ArbiterPipelineInfrastructure/platform/rbac/argocd-deployer-clusterrole.yaml`
+**Location**: `AphexPlatformInfrastructure/platform/rbac/argocd-deployer-clusterrole.yaml`
 
 **Permissions:**
 - Create, update, patch, get, and list ArgoCD Application resources
