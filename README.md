@@ -1,6 +1,6 @@
 # Aphex Pipeline Resources
 
-A catalog of reusable Tekton resources for the Arbiter platform.
+A catalog of reusable Tekton resources for the Aphex platform.
 
 ## Overview
 
@@ -49,7 +49,7 @@ spec:
 ### Using Dispatcher Templates
 
 ```yaml
-apiVersion: arbiter.io/v1alpha1
+apiVersion: aphex/v1alpha1
 kind: RepoBinding
 metadata:
   name: my-repo-binding

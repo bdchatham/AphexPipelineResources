@@ -253,7 +253,7 @@ Standard dispatcher template for webhook-triggered pipelines.
 
 **Template Reference:**
 ```yaml
-apiVersion: arbiter.io/v1alpha1
+apiVersion: aphex/v1alpha1
 kind: RepoBinding
 spec:
   templateRef: run-pipeline-v1
@@ -287,9 +287,9 @@ metadata:
   generateName: {pipeline-name}-
   namespace: {pipeline-namespace}
   labels:
-    platform.arbiter.io/triggered: "true"
-    platform.arbiter.io/event-type: {event-type}
-    platform.arbiter.io/event-id: {event-id}
+    platform.aphex/triggered: "true"
+    platform.aphex/event-type: {event-type}
+    platform.aphex/event-id: {event-id}
 spec:
   pipelineRef:
     resolver: cluster
@@ -438,7 +438,7 @@ spec:
 ### RepoBinding with Dispatcher Template
 
 ```yaml
-apiVersion: arbiter.io/v1alpha1
+apiVersion: aphex/v1alpha1
 kind: RepoBinding
 metadata:
   name: my-app-binding

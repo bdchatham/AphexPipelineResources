@@ -2,7 +2,7 @@
 
 ## Purpose
 
-AphexPipelineResources provides a catalog of reusable Tekton resources for the Arbiter platform. It contains:
+AphexPipelineResources provides a catalog of reusable Tekton resources for the Aphex platform. It contains:
 - **Tekton Tasks**: Reusable CI/CD building blocks for common operations
 - **Dispatcher Templates**: Thin execution envelopes that convert webhook events into PipelineRuns
 
@@ -42,7 +42,7 @@ spec:
 Reference templates in your RepoBinding:
 
 ```yaml
-apiVersion: arbiter.io/v1alpha1
+apiVersion: aphex/v1alpha1
 kind: RepoBinding
 metadata:
   name: my-repo-binding

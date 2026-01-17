@@ -48,7 +48,7 @@ The standard dispatcher template for webhook-triggered pipelines.
 **Usage**:
 
 ```yaml
-apiVersion: arbiter.io/v1alpha1
+apiVersion: aphex/v1alpha1
 kind: RepoBinding
 metadata:
   name: my-repo-binding
@@ -104,8 +104,8 @@ To add a new template:
 3. **Add labels**:
    ```yaml
    labels:
-     platform.arbiter.io/template-version: v1
-     platform.arbiter.io/managed-by: platform
+     platform.aphex/template-version: v1
+     platform.aphex/managed-by: platform
    ```
 4. **Document in this README**
 5. **Update controller** to recognize the new template

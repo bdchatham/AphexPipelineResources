@@ -3,14 +3,14 @@
 ## General Questions
 
 ### What is this repository for?
-AphexPipelineResources is a catalog of reusable Tekton resources for the Arbiter platform. It provides:
+AphexPipelineResources is a catalog of reusable Tekton resources for the Aphex platform. It provides:
 - Tekton Tasks for common CI/CD operations (build, test, deploy)
 - Dispatcher Templates that convert webhook events into PipelineRuns
 
 Product teams reference these resources when building their pipelines.
 
 ### How does this fit into the larger system?
-This repository is part of the Arbiter platform's CI/CD infrastructure:
+This repository is part of the Aphex platform's CI/CD infrastructure:
 - **Platform Team** (this repo): Provides reusable tasks and dispatcher templates
 - **Product Teams**: Compose tasks into pipelines and define workflow logic
 - **Onboarding Controller**: Materializes dispatcher templates into org namespaces
@@ -95,7 +95,7 @@ taskRef:
 In your RepoBinding:
 
 ```yaml
-apiVersion: arbiter.io/v1alpha1
+apiVersion: aphex/v1alpha1
 kind: RepoBinding
 spec:
   templateRef: run-pipeline-v1

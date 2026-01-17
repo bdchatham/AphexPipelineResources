@@ -150,8 +150,8 @@ metadata:
   name: string
   namespace: string
   labels:
-    platform.arbiter.io/template-version: string
-    platform.arbiter.io/managed-by: string
+    platform.aphex/template-version: string
+    platform.aphex/managed-by: string
 spec:
   # Template specification
 ```
@@ -186,8 +186,8 @@ kind: TriggerTemplate
 metadata:
   name: run-pipeline-v1
   labels:
-    platform.arbiter.io/template-version: v1
-    platform.arbiter.io/managed-by: platform
+    platform.aphex/template-version: v1
+    platform.aphex/managed-by: platform
 spec:
   params:
     # Webhook parameters
@@ -226,9 +226,9 @@ spec:
         generateName: "$(tt.params.pipeline-name)-"
         namespace: "$(tt.params.pipeline-namespace)"
         labels:
-          platform.arbiter.io/triggered: "true"
-          platform.arbiter.io/event-type: "$(tt.params.event-type)"
-          platform.arbiter.io/event-id: "$(tt.params.event-id)"
+          platform.aphex/triggered: "true"
+          platform.aphex/event-type: "$(tt.params.event-type)"
+          platform.aphex/event-id: "$(tt.params.event-id)"
       spec:
         pipelineRef:
           resolver: cluster

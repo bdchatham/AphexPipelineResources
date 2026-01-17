@@ -2,7 +2,7 @@
 
 ## System Design
 
-AphexPipelineResources is a **resource catalog repository** that provides reusable Tekton components for the Arbiter platform. It follows a clear separation between platform-managed resources (this repo) and product-owned pipelines (product repos).
+AphexPipelineResources is a **resource catalog repository** that provides reusable Tekton components for the Aphex platform. It follows a clear separation between platform-managed resources (this repo) and product-owned pipelines (product repos).
 
 ### Design Principles
 

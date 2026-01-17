@@ -1,6 +1,6 @@
 # Tekton Tasks
 
-This directory contains reusable Tekton tasks for the Arbiter platform.
+This directory contains reusable Tekton tasks for the Aphex platform.
 
 ## Available Tasks
 
