@@ -42,7 +42,7 @@ spec:
 Reference templates in your RepoBinding:
 
 ```yaml
-apiVersion: aphex/v1alpha1
+apiVersion: aphex.io/v1alpha1
 kind: RepoBinding
 metadata:
   name: my-repo-binding

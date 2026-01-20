@@ -253,7 +253,7 @@ Standard dispatcher template for webhook-triggered pipelines.
 
 **Template Reference:**
 ```yaml
-apiVersion: aphex/v1alpha1
+apiVersion: aphex.io/v1alpha1
 kind: RepoBinding
 spec:
   templateRef: run-pipeline-v1
@@ -438,7 +438,7 @@ spec:
 ### RepoBinding with Dispatcher Template
 
 ```yaml
-apiVersion: aphex/v1alpha1
+apiVersion: aphex.io/v1alpha1
 kind: RepoBinding
 metadata:
   name: my-app-binding

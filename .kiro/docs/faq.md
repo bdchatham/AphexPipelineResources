@@ -95,7 +95,7 @@ taskRef:
 In your RepoBinding:
 
 ```yaml
-apiVersion: aphex/v1alpha1
+apiVersion: aphex.io/v1alpha1
 kind: RepoBinding
 spec:
   templateRef: run-pipeline-v1

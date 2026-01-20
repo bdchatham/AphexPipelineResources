@@ -48,7 +48,7 @@ The standard dispatcher template for webhook-triggered pipelines.
 **Usage**:
 
 ```yaml
-apiVersion: aphex/v1alpha1
+apiVersion: aphex.io/v1alpha1
 kind: RepoBinding
 metadata:
   name: my-repo-binding
