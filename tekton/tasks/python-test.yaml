@@ -20,7 +20,13 @@ spec:
         #!/bin/bash
         set -e
         echo "Installing Python dependencies..."
-        pip install --no-cache-dir -e ".[test]"
+        if [ -f "pyproject.toml" ] || [ -f "setup.py" ]; then
+          pip install --no-cache-dir -e ".[test]" || pip install --no-cache-dir -e "."
+        elif [ -f "requirements.txt" ]; then
+          pip install --no-cache-dir -r requirements.txt
+        fi
+        # Install pytest if not already installed
+        pip install --no-cache-dir pytest pytest-cov 2>/dev/null || true
     
     - name: run-tests
       image: python:3.11-slim
