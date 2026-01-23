@@ -20,6 +20,9 @@ spec:
     - name: app-name
       description: Name of the ArgoCD Application
       type: string
+    - name: app-project
+      description: ArgoCD AppProject for isolation
+      type: string
     - name: repo-url
       description: Git repository URL containing the manifests
       type: string
@@ -81,7 +84,7 @@ spec:
           finalizers:
             - resources-finalizer.argocd.argoproj.io
         spec:
-          project: default
+          project: $(params.app-project)
           source:
             repoURL: $(params.repo-url)
             targetRevision: $(params.repo-revision)
