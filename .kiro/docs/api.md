@@ -173,6 +173,7 @@ taskRef:
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
 | `app-name` | string | Yes | - | Name of the ArgoCD Application |
+| `app-project` | string | Yes | - | ArgoCD AppProject for isolation |
 | `repo-url` | string | Yes | - | Git repository URL containing the manifests |
 | `repo-revision` | string | No | `main` | Git revision (branch, tag, or commit SHA) |
 | `manifest-path` | string | Yes | - | Path within the repository containing Kubernetes manifests |

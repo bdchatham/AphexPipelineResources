@@ -68,6 +68,7 @@ Creates or updates ArgoCD Application resources for GitOps deployment.
 
 **Parameters:**
 - `app-name`: Name of the ArgoCD Application
+- `app-project`: ArgoCD AppProject for isolation
 - `repo-url`: Git repository URL containing the manifests
 - `repo-revision`: Git revision (branch, tag, or commit SHA) (default: `main`)
 - `manifest-path`: Path within the repository containing Kubernetes manifests
