@@ -15,6 +15,7 @@ This creates tasks in the `tekton-pipelines` namespace:
 - `buildah-build`
 - `python-test`
 - `kubectl-apply`
+- `argocd-deployment`
 
 ### Updating Tasks
 
@@ -134,6 +135,28 @@ No automated alerting is configured for this repository. Issues are typically di
 1. Verify `manifest-dir` parameter points to correct directory in workspace
 2. Check if directory exists in source repository
 3. Verify workspace is properly mounted and populated
+
+#### ArgoCD Application Creation Failures
+
+**Symptom**: `argocd-deployment` task fails with permission errors
+
+**Resolution**:
+1. Verify pipeline ServiceAccount has `argocd-application-deployer` ClusterRole binding:
+   ```bash
+   kubectl get clusterrolebinding | grep argocd-application-deployer
+   ```
+2. Check if ArgoCD is installed in the specified namespace:
+   ```bash
+   kubectl get pods -n argocd
+   ```
+3. Verify `app-project` parameter references an existing ArgoCD AppProject:
+   ```bash
+   kubectl get appproject -n argocd
+   ```
+
+**Source**
+- `tekton/tasks/argocd-deployment.yaml`
+- `AphexPlatformInfrastructure/platform/rbac/argocd-deployer-clusterrole.yaml`
 
 ### Troubleshooting
 

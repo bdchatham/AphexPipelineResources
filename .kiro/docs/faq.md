@@ -129,6 +129,38 @@ Buildah needs privileged mode to:
 
 This is a Buildah requirement, not a task design choice.
 
+### How do I use the argocd-deployment task?
+The `argocd-deployment` task creates ArgoCD Applications for GitOps deployment:
+
+```yaml
+- name: deploy-to-argocd
+  taskRef:
+    resolver: cluster
+    params:
+      - name: name
+        value: argocd-deployment
+      - name: namespace
+        value: tekton-pipelines
+  params:
+    - name: app-name
+      value: my-app
+    - name: app-project
+      value: my-project
+    - name: repo-url
+      value: https://github.com/org/repo.git
+    - name: repo-revision
+      value: $(params.git-revision)
+    - name: manifest-path
+      value: manifests/
+    - name: target-namespace
+      value: my-app-namespace
+```
+
+Your pipeline ServiceAccount must have the `argocd-application-deployer` ClusterRole binding.
+
+**Source**
+- `tekton/tasks/argocd-deployment.yaml`
+
 ## Archon-Specific Questions
 
 ### How is this repository ingested by Archon?

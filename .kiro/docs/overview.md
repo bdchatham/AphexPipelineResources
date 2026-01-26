@@ -75,6 +75,7 @@ This repository acts as a centralized catalog. Resources are deployed to the `te
 - `buildah-build` - Build and push container images
 - `python-test` - Run Python tests with pytest
 - `kubectl-apply` - Apply Kubernetes manifests
+- `argocd-deployment` - Create or update ArgoCD Applications for GitOps deployment
 
 ### Dispatcher Templates
 - `run-pipeline-v1` - Standard webhook-to-PipelineRun dispatcher
