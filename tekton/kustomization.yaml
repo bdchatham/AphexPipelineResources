@@ -6,5 +6,6 @@ resources:
 - tasks/buildah-build.yaml
 - tasks/kubectl-apply.yaml
 - tasks/argocd-deployment.yaml
+- tasks/scip-sync.yaml
 
 namespace: tekton-pipelines

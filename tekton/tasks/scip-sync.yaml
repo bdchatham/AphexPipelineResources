@@ -1,0 +1,268 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: scip-sync
+  labels:
+    app.kubernetes.io/version: "0.1"
+  annotations:
+    tekton.dev/pipelines.minVersion: "0.12.1"
+    tekton.dev/categories: Knowledge Base
+    tekton.dev/tags: archon, scip, sync, knowledge-base
+    tekton.dev/displayName: "SCIP Sync Pipeline"
+    tekton.dev/platforms: "linux/amd64,linux/arm64"
+spec:
+  description: >-
+    Clones workspace repositories, runs SCIP indexing on code sources,
+    generates Archon documentation, and synchronizes results to the
+    knowledge base vector store and code graph. Updates KnowledgeBase
+    status on completion or failure.
+
+  params:
+    - name: kb-name
+      description: Name of the KnowledgeBase resource
+      type: string
+    - name: kb-namespace
+      description: Namespace of the KnowledgeBase resource
+      type: string
+    - name: workspace-name
+      description: Logical workspace name for the knowledge base
+      type: string
+
+  workspaces:
+    - name: shared-data
+      description: Shared workspace volume for cloned repos and generated artifacts
+
+  steps:
+    - name: clone-repos
+      image: "bitnami/git:latest"
+      onError: continue
+      script: |
+        #!/bin/bash
+        set -e
+
+        REPOS_DIR="$(workspaces.shared-data.path)/repos"
+        STATUS_DIR="$(workspaces.shared-data.path)/status"
+        mkdir -p "${REPOS_DIR}" "${STATUS_DIR}"
+
+        echo "Fetching repository config from ConfigMap $(params.kb-name)-repos"
+        CONFIGMAP_DATA=$(kubectl get configmap "$(params.kb-name)-repos" \
+          -n "$(params.kb-namespace)" \
+          -o jsonpath='{.data}')
+
+        if [ -z "${CONFIGMAP_DATA}" ]; then
+          echo "ERROR: No repository configuration found"
+          echo "clone-repos: failed - no repository configuration" > "${STATUS_DIR}/step-results"
+          exit 1
+        fi
+
+        CLONE_FAILED=0
+        for KEY in $(echo "${CONFIGMAP_DATA}" | python3 -c "
+        import sys, json
+        data = json.load(sys.stdin)
+        for k in sorted(data.keys()):
+            if k.endswith('.url'):
+                print(k)
+        "); do
+          REPO_URL=$(echo "${CONFIGMAP_DATA}" | python3 -c "
+        import sys, json
+        data = json.load(sys.stdin)
+        print(data.get('${KEY}', ''))
+        ")
+
+          INDEX=$(echo "${KEY}" | sed 's/\.url$//')
+          BRANCH_KEY="${INDEX}.branch"
+          BRANCH=$(echo "${CONFIGMAP_DATA}" | python3 -c "
+        import sys, json
+        data = json.load(sys.stdin)
+        print(data.get('${BRANCH_KEY}', 'mainline'))
+        ")
+
+          REPO_NAME=$(basename "${REPO_URL}" .git)
+          echo "Cloning ${REPO_URL} (branch: ${BRANCH}) into ${REPOS_DIR}/${REPO_NAME}"
+
+          if git clone --depth 1 --branch "${BRANCH}" "${REPO_URL}" "${REPOS_DIR}/${REPO_NAME}"; then
+            echo "  ✓ Cloned ${REPO_NAME}"
+          else
+            echo "  ✗ Failed to clone ${REPO_NAME}"
+            CLONE_FAILED=1
+          fi
+        done
+
+        if [ "${CLONE_FAILED}" -eq 1 ]; then
+          echo "clone-repos: partial-failure" > "${STATUS_DIR}/step-results"
+          exit 1
+        fi
+
+        echo "clone-repos: success" > "${STATUS_DIR}/step-results"
+        echo "All repositories cloned successfully"
+
+    - name: process-sources
+      image: "ghcr.io/bdchatham/archon-scip-runner:latest"
+      onError: continue
+      script: |
+        #!/bin/bash
+        set -e
+
+        REPOS_DIR="$(workspaces.shared-data.path)/repos"
+        STATUS_DIR="$(workspaces.shared-data.path)/status"
+        STAGING_DIR="$(workspaces.shared-data.path)/staging"
+        mkdir -p "${STAGING_DIR}"
+
+        echo "Fetching source config from ConfigMap $(params.kb-name)-source-config"
+        SOURCE_CONFIG=$(kubectl get configmap "$(params.kb-name)-source-config" \
+          -n "$(params.kb-namespace)" \
+          -o json)
+
+        if [ -z "${SOURCE_CONFIG}" ]; then
+          echo "ERROR: No source configuration found"
+          echo "process-sources: failed - no source configuration" >> "${STATUS_DIR}/step-results"
+          exit 1
+        fi
+
+        PROCESS_FAILED=0
+
+        python3 -c "
+        import json, sys, os, subprocess
+
+        config = json.loads('''${SOURCE_CONFIG}''')
+        data = config.get('data', {})
+        repos_dir = '${REPOS_DIR}'
+        staging_dir = '${STAGING_DIR}'
+
+        source_indices = set()
+        for key in data:
+            parts = key.split('.')
+            if len(parts) >= 2 and parts[0] == 'source':
+                source_indices.add(parts[1])
+
+        for idx in sorted(source_indices):
+            url = data.get(f'source.{idx}.url', '')
+            source_type = data.get(f'source.{idx}.sourceType', 'docs')
+            paths = data.get(f'source.{idx}.paths', '')
+            repo_name = url.rstrip('/').split('/')[-1].replace('.git', '')
+            repo_path = os.path.join(repos_dir, repo_name)
+
+            print(f'Processing source {idx}: {repo_name} (type: {source_type})')
+
+            if not os.path.isdir(repo_path):
+                print(f'  WARNING: Repository directory not found: {repo_path}')
+                continue
+
+            if source_type == 'code':
+                print(f'  Running language detection and SCIP indexing for {repo_name}')
+                result = subprocess.run(
+                    ['python3', '-m', 'archon_scip_runner.process',
+                     '--repo-path', repo_path,
+                     '--paths', paths],
+                    capture_output=True, text=True
+                )
+                if result.returncode != 0:
+                    print(f'  WARNING: SCIP processing failed for {repo_name}')
+                    print(f'  stderr: {result.stderr}')
+                else:
+                    print(f'  ✓ SCIP indexing and doc generation complete for {repo_name}')
+
+            elif source_type == 'docs':
+                print(f'  Staging documentation files for {repo_name}')
+                dest = os.path.join(staging_dir, repo_name)
+                os.makedirs(dest, exist_ok=True)
+                for pattern in paths.split(','):
+                    pattern = pattern.strip()
+                    if pattern:
+                        src = os.path.join(repo_path, pattern)
+                        if os.path.isdir(src):
+                            subprocess.run(['cp', '-r', src, dest])
+                        elif os.path.isfile(src):
+                            subprocess.run(['cp', src, dest])
+                print(f'  ✓ Documentation staged for {repo_name}')
+        "
+
+        if [ $? -ne 0 ]; then
+          PROCESS_FAILED=1
+        fi
+
+        if [ "${PROCESS_FAILED}" -eq 1 ]; then
+          echo "process-sources: failed" >> "${STATUS_DIR}/step-results"
+          exit 1
+        fi
+
+        echo "process-sources: success" >> "${STATUS_DIR}/step-results"
+        echo "All sources processed successfully"
+
+    - name: sync-workspace
+      image: "ghcr.io/bdchatham/archon-scip-runner:latest"
+      onError: continue
+      script: |
+        #!/bin/bash
+        set -e
+
+        WORKSPACE_PATH="$(workspaces.shared-data.path)"
+        STATUS_DIR="${WORKSPACE_PATH}/status"
+
+        echo "Invoking sync_workspace for workspace: $(params.workspace-name)"
+
+        python3 -c "
+        from archon_scip_runner.sync import sync_workspace
+
+        workspace_path = '${WORKSPACE_PATH}'
+        workspace_name = '$(params.workspace-name)'
+
+        print(f'Syncing workspace {workspace_name} from {workspace_path}')
+        result = sync_workspace(workspace_path, workspace_name)
+        print(f'Sync complete: {result}')
+        "
+
+        if [ $? -ne 0 ]; then
+          echo "sync-workspace: failed" >> "${STATUS_DIR}/step-results"
+          exit 1
+        fi
+
+        echo "sync-workspace: success" >> "${STATUS_DIR}/step-results"
+        echo "Workspace sync completed successfully"
+
+    - name: update-status
+      image: "bitnami/kubectl:1.28"
+      script: |
+        #!/bin/bash
+
+        STATUS_DIR="$(workspaces.shared-data.path)/status"
+        SYNC_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+        STEP_RESULTS=""
+        if [ -f "${STATUS_DIR}/step-results" ]; then
+          STEP_RESULTS=$(cat "${STATUS_DIR}/step-results")
+        fi
+
+        HAS_FAILURE=$(echo "${STEP_RESULTS}" | grep -c "failed" || true)
+
+        if [ "${HAS_FAILURE}" -gt 0 ]; then
+          PHASE="Failed"
+          MESSAGE="Sync pipeline failed. Step results: ${STEP_RESULTS}"
+          echo "Pipeline had failures:"
+          echo "${STEP_RESULTS}"
+        else
+          PHASE="Ready"
+          MESSAGE="Sync completed successfully at ${SYNC_TIME}"
+          echo "Pipeline completed successfully"
+        fi
+
+        echo "Patching KnowledgeBase $(params.kb-name) status in $(params.kb-namespace)"
+
+        kubectl patch knowledgebase "$(params.kb-name)" \
+          -n "$(params.kb-namespace)" \
+          --type merge \
+          --subresource status \
+          -p "{
+            \"status\": {
+              \"phase\": \"${PHASE}\",
+              \"message\": \"${MESSAGE}\",
+              \"lastSyncTime\": \"${SYNC_TIME}\"
+            }
+          }"
+
+        if [ $? -eq 0 ]; then
+          echo "✓ KnowledgeBase status updated"
+        else
+          echo "✗ Failed to update KnowledgeBase status"
+          exit 1
+        fi
