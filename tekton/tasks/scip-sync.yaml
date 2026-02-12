@@ -27,6 +27,10 @@ spec:
     - name: workspace-name
       description: Logical workspace name for the knowledge base
       type: string
+    - name: kb-resource-namespace
+      description: Namespace where the KnowledgeBase resource lives (for status patching)
+      type: string
+      default: platform-system
 
   workspaces:
     - name: shared-data
@@ -246,10 +250,10 @@ spec:
           echo "Pipeline completed successfully"
         fi
 
-        echo "Patching KnowledgeBase $(params.kb-name) status in $(params.kb-namespace)"
+        echo "Patching KnowledgeBase $(params.kb-name) status in $(params.kb-resource-namespace)"
 
         kubectl patch knowledgebase "$(params.kb-name)" \
-          -n "$(params.kb-namespace)" \
+          -n "$(params.kb-resource-namespace)" \
           --type merge \
           --subresource status \
           -p "{
