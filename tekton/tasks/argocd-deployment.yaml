@@ -3,7 +3,7 @@ kind: Task
 metadata:
   name: argocd-deployment
   labels:
-    app.kubernetes.io/version: "0.1"
+    app.kubernetes.io/version: "0.2"
   annotations:
     tekton.dev/pipelines.minVersion: "0.12.1"
     tekton.dev/categories: GitOps
@@ -12,30 +12,34 @@ metadata:
     tekton.dev/platforms: "linux/amd64,linux/arm64"
 spec:
   description: >-
-    This Task creates or updates an ArgoCD Application resource to deploy
-    applications using GitOps. It generates the Application manifest and
-    applies it to the cluster, allowing ArgoCD to handle the actual deployment.
+    Creates or updates an ArgoCD Application resource for GitOps deployment.
+    When running inside the Aphex platform, reads pipeline-context ConfigMap
+    for platform-derived values. Explicit params override context values.
 
   params:
     - name: app-name
-      description: Name of the ArgoCD Application
+      description: ArgoCD Application name
       type: string
+      default: ""
     - name: app-project
       description: ArgoCD AppProject for isolation
       type: string
+      default: ""
     - name: repo-url
       description: Git repository URL containing the manifests
       type: string
+      default: ""
     - name: repo-revision
       description: Git revision (branch, tag, or commit SHA)
       type: string
-      default: "main"
+      default: "mainline"
     - name: manifest-path
       description: Path within the repository containing Kubernetes manifests
       type: string
     - name: target-namespace
       description: Target namespace where the application will be deployed
       type: string
+      default: ""
     - name: argocd-namespace
       description: Namespace where ArgoCD is installed
       type: string
@@ -64,40 +68,82 @@ spec:
   steps:
     - name: create-argocd-application
       image: "$(params.kubectl-image)"
+      envFrom:
+        - configMapRef:
+            name: pipeline-context
+            optional: true
+      env:
+        - name: PARAM_APP_NAME
+          value: "$(params.app-name)"
+        - name: PARAM_APP_PROJECT
+          value: "$(params.app-project)"
+        - name: PARAM_REPO_URL
+          value: "$(params.repo-url)"
+        - name: PARAM_REPO_REVISION
+          value: "$(params.repo-revision)"
+        - name: PARAM_MANIFEST_PATH
+          value: "$(params.manifest-path)"
+        - name: PARAM_TARGET_NAMESPACE
+          value: "$(params.target-namespace)"
+        - name: PARAM_ARGOCD_NAMESPACE
+          value: "$(params.argocd-namespace)"
+        - name: PARAM_AUTO_SYNC
+          value: "$(params.auto-sync)"
+        - name: PARAM_PRUNE
+          value: "$(params.prune)"
+        - name: PARAM_SELF_HEAL
+          value: "$(params.self-heal)"
+        - name: PARAM_CREATE_NAMESPACE
+          value: "$(params.create-namespace)"
       script: |
         #!/bin/bash
         set -e
 
-        echo "Creating ArgoCD Application: $(params.app-name)"
-        echo "Repository: $(params.repo-url)"
-        echo "Revision: $(params.repo-revision)"
-        echo "Path: $(params.manifest-path)"
-        echo "Target Namespace: $(params.target-namespace)"
+        APP_NAME="${PARAM_APP_NAME:-$PIPELINE_NAME}"
+        APP_PROJECT="${PARAM_APP_PROJECT:-$PIPELINE_NAME}"
+        REPO_URL_VAL="${PARAM_REPO_URL:-$REPO_URL}"
+        REPO_REVISION="${PARAM_REPO_REVISION}"
+        MANIFEST_PATH="${PARAM_MANIFEST_PATH}"
+        TARGET_NS="${PARAM_TARGET_NAMESPACE:-$ORG_NAMESPACE}"
+        ARGOCD_NS="${PARAM_ARGOCD_NAMESPACE}"
 
-        # Generate ArgoCD Application manifest
+        for var in APP_NAME APP_PROJECT REPO_URL_VAL MANIFEST_PATH TARGET_NS; do
+          if [ -z "${!var}" ]; then
+            echo "ERROR: ${var} is not set. Provide it as a param or via pipeline-context ConfigMap."
+            exit 1
+          fi
+        done
+
+        echo "Creating ArgoCD Application: ${APP_NAME}"
+        echo "Project: ${APP_PROJECT}"
+        echo "Repository: ${REPO_URL_VAL}"
+        echo "Revision: ${REPO_REVISION}"
+        echo "Path: ${MANIFEST_PATH}"
+        echo "Target Namespace: ${TARGET_NS}"
+
         cat <<EOF | kubectl apply -f - --server-side
         apiVersion: argoproj.io/v1alpha1
         kind: Application
         metadata:
-          name: $(params.app-name)
-          namespace: $(params.argocd-namespace)
+          name: ${APP_NAME}
+          namespace: ${ARGOCD_NS}
           finalizers:
             - resources-finalizer.argocd.argoproj.io
         spec:
-          project: $(params.app-project)
+          project: ${APP_PROJECT}
           source:
-            repoURL: $(params.repo-url)
-            targetRevision: $(params.repo-revision)
-            path: $(params.manifest-path)
+            repoURL: ${REPO_URL_VAL}
+            targetRevision: ${REPO_REVISION}
+            path: ${MANIFEST_PATH}
           destination:
             server: https://kubernetes.default.svc
-            namespace: $(params.target-namespace)
+            namespace: ${TARGET_NS}
           syncPolicy:
             automated:
-              prune: $(params.prune)
-              selfHeal: $(params.self-heal)
+              prune: ${PARAM_PRUNE}
+              selfHeal: ${PARAM_SELF_HEAL}
             syncOptions:
-              - CreateNamespace=$(params.create-namespace)
+              - CreateNamespace=${PARAM_CREATE_NAMESPACE}
             retry:
               limit: 5
               backoff:
@@ -107,11 +153,6 @@ spec:
         EOF
 
         echo ""
-        echo "✓ ArgoCD Application '$(params.app-name)' created/updated successfully"
+        echo "✓ ArgoCD Application '${APP_NAME}' created/updated successfully"
         echo ""
-        echo "Verifying Application was created..."
-        kubectl get application $(params.app-name) -n $(params.argocd-namespace)
-        
-        echo ""
-        echo "ArgoCD will now sync the application from Git."
-        echo "Monitor sync status: kubectl get application $(params.app-name) -n $(params.argocd-namespace) -o jsonpath='{.status.sync.status}'"
+        kubectl get application ${APP_NAME} -n ${ARGOCD_NS}
