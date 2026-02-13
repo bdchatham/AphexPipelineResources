@@ -63,7 +63,7 @@ spec:
     - name: kubectl-image
       description: The image providing kubectl binary
       type: string
-      default: "bitnami/kubectl:1.28"
+      default: "bitnami/kubectl:latest"
 
   steps:
     - name: create-argocd-application
