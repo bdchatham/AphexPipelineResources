@@ -105,7 +105,7 @@ spec:
         REPO_REVISION="${PARAM_REPO_REVISION}"
         MANIFEST_PATH="${PARAM_MANIFEST_PATH}"
         TARGET_NS="${PARAM_TARGET_NAMESPACE:-$ORG_NAMESPACE}"
-        ARGOCD_NS="${PARAM_ARGOCD_NAMESPACE}"
+        APP_NS="${PIPELINE_NAME:-$PARAM_ARGOCD_NAMESPACE}"
 
         for var in APP_NAME APP_PROJECT REPO_URL_VAL MANIFEST_PATH TARGET_NS; do
           if [ -z "${!var}" ]; then
@@ -126,7 +126,9 @@ spec:
         kind: Application
         metadata:
           name: ${APP_NAME}
-          namespace: ${ARGOCD_NS}
+          namespace: ${APP_NS}
+          labels:
+            platform.aphex/pipeline: ${APP_NAME}
           finalizers:
             - resources-finalizer.argocd.argoproj.io
         spec:
@@ -155,4 +157,4 @@ spec:
         echo ""
         echo "✓ ArgoCD Application '${APP_NAME}' created/updated successfully"
         echo ""
-        kubectl get application ${APP_NAME} -n ${ARGOCD_NS}
+        kubectl get application ${APP_NAME} -n ${APP_NS}
