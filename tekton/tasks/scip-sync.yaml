@@ -137,9 +137,9 @@ spec:
         KIRO_DATA="${HOME}/.local/share/kiro-cli"
         mkdir -p "${KIRO_DATA}"
 
-        # Create auth_kv and inject token; kiro-cli creates state table itself
+        # Let kiro-cli initialize its database (will fail on auth, but tables get created)
+        KIRO_CLI_SKIP_SETUP=1 kiro-cli chat "init" 2>/dev/null || true
         sqlite3 "${KIRO_DATA}/data.sqlite3" \
-          "CREATE TABLE IF NOT EXISTS auth_kv (key TEXT PRIMARY KEY, value TEXT);" \
           "INSERT OR REPLACE INTO auth_kv (key, value) VALUES ('kirocli:social:token', json('${SOCIAL_TOKEN}'));"
 
         WORKSPACE="$(workspaces.shared-data.path)/repos"
