@@ -140,6 +140,7 @@ spec:
         # Let kiro-cli initialize its database schema, then inject credentials
         kiro-cli --version 2>/dev/null || true
         sqlite3 "${KIRO_DATA}/data.sqlite3" \
+          "CREATE TABLE IF NOT EXISTS auth_kv (key TEXT PRIMARY KEY, value TEXT);" \
           "INSERT OR REPLACE INTO auth_kv (key, value) VALUES ('kirocli:social:token', json('${SOCIAL_TOKEN}'));" \
           "INSERT OR REPLACE INTO state (key, value) VALUES ('api.codewhisperer.profile', '${PROFILE}');"
 
