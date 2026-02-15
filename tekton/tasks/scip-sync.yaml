@@ -154,6 +154,16 @@ spec:
         cp /root/.kiro/settings/mcp.json "$(workspaces.shared-data.path)/.kiro/settings/mcp.json"
 
         cd "$(workspaces.shared-data.path)"
+
+        # Verify MCP server is discoverable before spending tokens
+        MCP_LIST=$(HOME=/root kiro-cli mcp list 2>&1)
+        echo "${MCP_LIST}"
+        if ! echo "${MCP_LIST}" | grep -q "aphex-knowledge-base"; then
+          echo "ERROR: aphex-knowledge-base MCP server not discovered. HOME=${HOME}, PWD=$(pwd)"
+          ls -la .kiro/settings/mcp.json /root/.kiro/settings/mcp.json 2>&1
+          exit 1
+        fi
+
         HOME=/root kiro-cli chat --no-interactive --trust-all-tools --require-mcp-startup \
           "You have access to the aphex-knowledge-base MCP tools.
 
