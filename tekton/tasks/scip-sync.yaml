@@ -149,6 +149,11 @@ spec:
           MODEL_FLAG="Use model: ${AGENT_MODEL}."
         fi
 
+        # Ensure kiro finds MCP config in the workspace
+        mkdir -p "$(workspaces.shared-data.path)/.kiro/settings"
+        cp /root/.kiro/settings/mcp.json "$(workspaces.shared-data.path)/.kiro/settings/mcp.json"
+
+        cd "$(workspaces.shared-data.path)"
         kiro-cli chat --no-interactive --trust-all-tools \
           "You have access to the aphex-knowledge-base MCP tools.
 
