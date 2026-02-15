@@ -25,8 +25,8 @@ spec:
     - name: workspace-name
       description: Logical workspace name for the knowledge base
       type: string
-    - name: agent-api-key-secret
-      description: Name of the Secret containing the agent API key (empty to skip summary generation)
+    - name: auth-credential-secret
+      description: Name of the Secret property containing auth credentials JSON (empty to skip summary generation)
       type: string
       default: ""
     - name: agent-model
@@ -103,7 +103,7 @@ spec:
 
     # ------------------------------------------------------------------
     # Step 4: Generate natural-language summaries via Kiro + MCP tools
-    #         Skipped when no agent API key secret is provided.
+    #         Skipped when no auth credential secret is provided.
     # ------------------------------------------------------------------
     - name: generate-summaries
       image: "ghcr.io/bdchatham/aphex-scip-runner:latest"
@@ -114,24 +114,34 @@ spec:
           value: "http://$(params.kb-name)-qdrant:6334"
         - name: EMBEDDING_URL
           value: "http://$(params.kb-name)-embedding-svc:8000"
-        - name: AGENT_API_KEY_SECRET
-          value: "$(params.agent-api-key-secret)"
+        - name: AUTH_CREDENTIAL_SECRET
+          value: "$(params.auth-credential-secret)"
         - name: AGENT_MODEL
           value: "$(params.agent-model)"
       script: |
         #!/bin/bash
         set -euo pipefail
 
-        if [ -z "${AGENT_API_KEY_SECRET}" ]; then
-          echo "No agent API key secret configured — skipping summary generation"
+        if [ -z "${AUTH_CREDENTIAL_SECRET}" ]; then
+          echo "No auth credentials configured — skipping summary generation"
           exit 0
         fi
 
-        API_KEY=$(kubectl get secret "$(params.kb-name)-secrets" \
+        CREDS_JSON=$(kubectl get secret "$(params.kb-name)-secrets" \
           -n "$(params.kb-namespace)" \
-          -o jsonpath='{.data.agent_api_key}' | base64 -d)
+          -o jsonpath='{.data.auth_credentials}' | base64 -d)
 
-        export KIRO_API_KEY="${API_KEY}"
+        SOCIAL_TOKEN=$(echo "${CREDS_JSON}" | jq -r '.social_token')
+        PROFILE=$(echo "${CREDS_JSON}" | jq -r '.profile')
+
+        KIRO_DATA="${HOME}/.local/share/kiro-cli"
+        mkdir -p "${KIRO_DATA}"
+        sqlite3 "${KIRO_DATA}/data.sqlite3" <<SQL
+        CREATE TABLE IF NOT EXISTS auth_kv (key TEXT PRIMARY KEY, value TEXT);
+        CREATE TABLE IF NOT EXISTS state (key TEXT PRIMARY KEY, value TEXT);
+        INSERT OR REPLACE INTO auth_kv (key, value) VALUES ('kirocli:social:token', '${SOCIAL_TOKEN}');
+        INSERT OR REPLACE INTO state (key, value) VALUES ('api.codewhisperer.profile', '${PROFILE}');
+        SQL
 
         WORKSPACE="$(workspaces.shared-data.path)/repos"
 
