@@ -127,10 +127,9 @@ spec:
           exit 0
         fi
 
-        # Mount the API key from the named secret
-        API_KEY=$(kubectl get secret "${AGENT_API_KEY_SECRET}" \
+        API_KEY=$(kubectl get secret "$(params.kb-name)-secrets" \
           -n "$(params.kb-namespace)" \
-          -o jsonpath='{.data.api-key}' | base64 -d)
+          -o jsonpath='{.data.agent_api_key}' | base64 -d)
 
         export KIRO_API_KEY="${API_KEY}"
 
