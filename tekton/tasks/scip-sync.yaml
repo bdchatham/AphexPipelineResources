@@ -154,7 +154,7 @@ spec:
         cp /root/.kiro/settings/mcp.json "$(workspaces.shared-data.path)/.kiro/settings/mcp.json"
 
         cd "$(workspaces.shared-data.path)"
-        kiro-cli chat --no-interactive --trust-all-tools \
+        HOME=/root kiro-cli chat --no-interactive --trust-all-tools --require-mcp-startup \
           "You have access to the aphex-knowledge-base MCP tools.
 
         The workspace at ${WORKSPACE} has been SCIP-indexed and synced to the
