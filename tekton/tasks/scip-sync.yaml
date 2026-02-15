@@ -54,20 +54,20 @@ spec:
         CM_JSON=$(kubectl get configmap "$(params.kb-name)-repos" \
           -n "$(params.kb-namespace)" -o json)
 
-        URLS=$(echo "${CM_JSON}" | jq -r '.data | to_entries[] | select(.key | endswith(".url")) | .key')
+        INDICES=$(echo "${CM_JSON}" | jq -r '.data | keys[] | select(endswith(".repoName"))' | sed 's/.repoName$//')
 
         FAILED=0
-        for KEY in ${URLS}; do
-          URL=$(echo "${CM_JSON}" | jq -r --arg k "${KEY}" '.data[$k]')
-          IDX=${KEY%.url}
+        for IDX in ${INDICES}; do
+          ORG=$(echo "${CM_JSON}" | jq -r --arg k "${IDX}.repoOrg" '.data[$k]')
+          NAME=$(echo "${CM_JSON}" | jq -r --arg k "${IDX}.repoName" '.data[$k]')
           BRANCH=$(echo "${CM_JSON}" | jq -r --arg k "${IDX}.branch" '.data[$k] // "mainline"')
-          REPO_NAME=$(basename "${URL}" .git)
+          URL="https://github.com/${ORG}/${NAME}.git"
 
           echo "Cloning ${URL} (branch: ${BRANCH})"
-          if git clone --depth 1 --branch "${BRANCH}" "${URL}" "${REPOS_DIR}/${REPO_NAME}"; then
-            echo "  ✓ ${REPO_NAME}"
+          if git clone --depth 1 --branch "${BRANCH}" "${URL}" "${REPOS_DIR}/${NAME}"; then
+            echo "  ✓ ${NAME}"
           else
-            echo "  ✗ ${REPO_NAME}"
+            echo "  ✗ ${NAME}"
             FAILED=1
           fi
         done
