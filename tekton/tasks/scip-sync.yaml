@@ -137,12 +137,10 @@ spec:
         KIRO_DATA="${HOME}/.local/share/kiro-cli"
         mkdir -p "${KIRO_DATA}"
 
-        # Let kiro-cli initialize its database schema, then inject credentials
-        kiro-cli --version 2>/dev/null || true
+        # Create auth_kv and inject token; kiro-cli creates state table itself
         sqlite3 "${KIRO_DATA}/data.sqlite3" \
           "CREATE TABLE IF NOT EXISTS auth_kv (key TEXT PRIMARY KEY, value TEXT);" \
-          "INSERT OR REPLACE INTO auth_kv (key, value) VALUES ('kirocli:social:token', json('${SOCIAL_TOKEN}'));" \
-          "INSERT OR REPLACE INTO state (key, value) VALUES ('api.codewhisperer.profile', '${PROFILE}');"
+          "INSERT OR REPLACE INTO auth_kv (key, value) VALUES ('kirocli:social:token', json('${SOCIAL_TOKEN}'));"
 
         WORKSPACE="$(workspaces.shared-data.path)/repos"
 
