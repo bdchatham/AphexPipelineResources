@@ -95,7 +95,7 @@ spec:
         - name: GRAPH_URL
           value: "http://$(params.kb-name)-graph:8081"
         - name: QDRANT_URL
-          value: "http://$(params.kb-name)-qdrant:6334"
+          value: "http://$(params.kb-name)-qdrant:6333"
         - name: EMBEDDING_URL
           value: "http://$(params.kb-name)-embedding-svc:8000"
         - name: AUTH_CREDENTIAL_SECRET
