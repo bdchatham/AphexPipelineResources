@@ -85,27 +85,11 @@ spec:
         aphex-kb index --workspace "$(workspaces.shared-data.path)/repos"
 
     # ------------------------------------------------------------------
-    # Step 3: Sync SCIP data to the Code Graph and Vector Store
+    # Step 3: Generate docs and sync to Code Graph + Vector Store
+    #         via Kiro + MCP tools. Skipped when no auth credential
+    #         secret is provided.
     # ------------------------------------------------------------------
-    - name: sync-graph
-      image: "ghcr.io/bdchatham/aphex-scip-runner:latest"
-      env:
-        - name: GRAPH_URL
-          value: "http://$(params.kb-name)-graph:8081"
-        - name: QDRANT_URL
-          value: "http://$(params.kb-name)-qdrant:6334"
-        - name: EMBEDDING_URL
-          value: "http://$(params.kb-name)-embedding-svc:8000"
-      script: |
-        #!/bin/bash
-        set -euo pipefail
-        aphex-kb sync --workspace "$(workspaces.shared-data.path)/repos"
-
-    # ------------------------------------------------------------------
-    # Step 4: Generate natural-language summaries via Kiro + MCP tools
-    #         Skipped when no auth credential secret is provided.
-    # ------------------------------------------------------------------
-    - name: generate-summaries
+    - name: generate-and-sync
       image: "ghcr.io/bdchatham/aphex-scip-runner:latest"
       env:
         - name: GRAPH_URL
@@ -167,12 +151,12 @@ spec:
         HOME=/root kiro-cli chat --no-interactive --trust-all-tools --require-mcp-startup \
           "You have MCP tools from the aphex-knowledge-base server. Use ONLY these tools:
 
-        - document_workspace(workspacePath) — generates .archon.md docs for all packages
-        - sync_to_knowledge_base(workspacePath) — syncs SCIP indexes and docs to Code Graph + Vector Store
+        - document_workspace(workspacePath, force) — generates .archon.md docs for all packages
+        - sync_to_knowledge_base(workspacePath, force) — syncs SCIP indexes and docs to Code Graph + Vector Store
 
         Do NOT use built-in file read/write/shell tools. Execute exactly:
         1. Call document_workspace with workspacePath='${WORKSPACE}' and force=true
-        2. Call sync_to_knowledge_base with workspacePath='${WORKSPACE}'
+        2. Call sync_to_knowledge_base with workspacePath='${WORKSPACE}' and force=true
         3. Report what was synced.
 
         ${MODEL_FLAG}"
