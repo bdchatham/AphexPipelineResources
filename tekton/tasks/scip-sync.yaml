@@ -171,7 +171,7 @@ spec:
         - sync_to_knowledge_base(workspacePath) — syncs SCIP indexes and docs to Code Graph + Vector Store
 
         Do NOT use built-in file read/write/shell tools. Execute exactly:
-        1. Call document_workspace with workspacePath='${WORKSPACE}'
+        1. Call document_workspace with workspacePath='${WORKSPACE}' and force=true
         2. Call sync_to_knowledge_base with workspacePath='${WORKSPACE}'
         3. Report what was synced.
 
